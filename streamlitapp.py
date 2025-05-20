@@ -341,7 +341,7 @@ st.markdown("## 🗂️ Sección 5: Análisis por Categoría Final")
 
 # Mostrar tabla resumen de cantidad de conversaciones únicas por categoría
 st.markdown("### 🔢 Conversaciones Únicas por Categoría")
-conversaciones_por_categoria = df.groupby('categoria_final')['conversation_id'].nunique().reset_index()
+conversaciones_por_categoria = df[(~df.marca.isnull())].groupby('categoria_final')['conversation_id'].nunique().reset_index()
 conversaciones_por_categoria.columns = ['Categoría', 'Conversaciones']
 conversaciones_por_categoria = conversaciones_por_categoria.sort_values(by='Conversaciones', ascending=False)
 
@@ -362,6 +362,7 @@ intenciones_por_categoria.columns = ['Categoría', 'Intención', 'Conversaciones
 
 # Mostrar tabla
 st.dataframe(intenciones_por_categoria, use_container_width=True)
+st.dataframe(df_filtrado[df_filtrado.sender == 'USER'][['conversation_id','sender','sender_id','content']], use_container_width=True)
 
 # Gráfico opcional
 fig_intencion_cat = px.bar(
