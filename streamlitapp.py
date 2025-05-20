@@ -2,6 +2,9 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import pandas as pd
+import re
+
+from sympy.integrals.intpoly import strip
 
 st.set_page_config(page_title="Dashboard General Experience", layout="wide")
 
@@ -16,6 +19,8 @@ st.markdown('Se realiza lectura de 4 jsons entregados, posteriormente el procesa
 st.markdown("---")
 # Ejemplo de DataFrame
 df = pd.read_parquet('chats_5.parquet')
+df['order_internal_number'] = df["content"].apply(lambda x: re.findall(r"Orden Melonn:\s*(M\d+)", x)[0] if re.findall(r"Orden Melonn:\s*(M\d+)", x) else None)
+incidencias = pd.read_parquet('incidencias.parquet')
 df.drop(columns=['origen_mensaje','origen_mensaje_2','origen_mensaje_3','origen_mensaje_4','origen_mensaje_5','interaccion','interaccion_2'], inplace=True)
 
 # ======== SECCIÓN 1 ========
@@ -29,6 +34,15 @@ with met2:
     st.metric("📨 Conversaciones con Mensaje Inicial", df[~df.marca.isna()].conversation_id.nunique())
 with met3:
     st.metric("📨 Tasa Conversion con Mensaje Inicial", round(df[~df.marca.isna()].conversation_id.nunique() / df.conversation_id.nunique(),3 )* 100, "percent")
+
+met4, met5, met6 = st.columns([1, 1, 1])
+
+with met4:
+    st.metric("📨 Total Interacciones", df[df['Si'] == 'Si'].conversation_id.nunique())
+with met5:
+    st.metric("📨 Total Interacciones con Bots", df[(df['bots'] == 'Si') & (df['Si'] == 'Si')].conversation_id.nunique())
+with met6:
+    st.metric("📨 Tasa Interacciones con Bots", round(df[(df['bots'] == 'Si') & (df['Si'] == 'Si')].conversation_id.nunique() / df[df['Si'] == 'Si'].conversation_id.nunique(),3 )* 100, "percent")
 
 
 # Mostrar DataFrame completo (puedes poner un filtro aquí si quieres)
@@ -370,6 +384,43 @@ st.markdown(f"""
 > Al analizar la categoría **“{categoria_seleccionada}”**, puedes identificar cuáles son los temas más frecuentes abordados por los compradores.  
 > Esta información es útil para **priorizar mejoras operativas, automatizar respuestas frecuentes** o entrenar mejor a los agentes según la categoría dominante.
 """)
+
+
+# Sección para filtrar incidencias desde feedback
+st.markdown("## 🔍 Sección Final: Revisión de Incidencias según Feedback del Cliente")
+
+# Paso 1: Selección de tipo de respuesta
+opcion_feedback = st.selectbox(
+    "Selecciona el tipo de respuesta para filtrar las órdenes",
+    ["Excelente", "No me fue bien"]
+)
+
+# Paso 2: Filtrar df por contenido y obtener conversation_id
+convs_feedback = df[df['content'].str.contains(opcion_feedback.strip(), case=False, na=False)]['conversation_id'].unique()
+
+# Paso 3: Volver a filtrar df por conversation_id y extraer órdenes válidas
+ordenes_validas = df[
+    df['conversation_id'].isin(convs_feedback) &
+    df['order_internal_number'].notna()
+]['order_internal_number'].dropna().unique()
+
+# Paso 4: Filtrar incidencias por esas órdenes
+incidencias_filtradas = incidencias[
+    incidencias['número_interno_orden'].isin(ordenes_validas)
+]
+
+# Mostrar resultados
+st.markdown(f"### 📝 Incidencias relacionadas con conversaciones tipo: **{opcion_feedback}**")
+if len(ordenes_validas) == 0:
+    st.warning("⚠️ No se encontraron órdenes válidas asociadas a las conversaciones.")
+elif incidencias_filtradas.empty:
+    st.info("ℹ️ Se encontraron órdenes válidas, pero no hay incidencias relacionadas.")
+else:
+    st.dataframe(incidencias_filtradas, use_container_width=True)
+
+
+
+
 
 
 st.markdown("---")
