@@ -4,7 +4,7 @@ import plotly.express as px
 import pandas as pd
 import re
 
-from sympy.integrals.intpoly import strip
+
 
 st.set_page_config(page_title="Dashboard General Experience", layout="wide")
 
