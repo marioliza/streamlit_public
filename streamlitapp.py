@@ -4,6 +4,8 @@ import plotly.express as px
 import pandas as pd
 import re
 
+from sympy.integrals.intpoly import strip
+
 st.set_page_config(page_title="Dashboard General Experience", layout="wide")
 
 st.title("Análisis General Chats Experience")
@@ -111,7 +113,7 @@ st.markdown("""
 st.markdown("## 🌟 Sección 2: Visual de los mensajes con saludo estándar inicial")
 
 # Bloque 1: métricas
-met1, met2, met3 = st.columns([1, 1, 1])
+met1, met2, met3,met4 = st.columns([1, 1, 1,1])
 
 with met1:
     st.metric("🟢 Conversaciones con mensaje inicial e interacción",
@@ -126,6 +128,11 @@ with met2:
 with met3:
     st.metric("🤖 Conversaciones con bots que generaron interacción",
               df[(~df.marca.isna()) & (df.Si == 'Si') & (df.bots == 'Si')].conversation_id.nunique())
+with met4:
+    df_ = df[(df['bots'] == 'Si') & (df['Si'] == 'Si') & (~df.marca.isna()) & (df.sender == 'USER')].groupby(
+        'conversation_id').sender.value_counts().reset_index()
+    df_[df_['count'] > 2].conversation_id.nunique()
+    st.metric("Conversaciones con interraccion real", df[(~df.marca.isna()) & (df.Si == 'Si')].conversation_id.nunique() -(df[(~df.marca.isna()) & (df.Si == 'Si') & (df.bots == 'Si')].conversation_id.nunique()-df_[df_['count'] > 2].conversation_id.nunique()))
 
 
 # Espaciado antes del gráfico
@@ -341,7 +348,7 @@ st.markdown("## 🗂️ Sección 5: Análisis por Categoría Final")
 
 # Mostrar tabla resumen de cantidad de conversaciones únicas por categoría
 st.markdown("### 🔢 Conversaciones Únicas por Categoría")
-conversaciones_por_categoria = df[(~df.marca.isnull())].groupby('categoria_final')['conversation_id'].nunique().reset_index()
+conversaciones_por_categoria = df[(~df.marca.isnull()) & (df.bots == 'No')].groupby('categoria_final')['conversation_id'].nunique().reset_index()
 conversaciones_por_categoria.columns = ['Categoría', 'Conversaciones']
 conversaciones_por_categoria = conversaciones_por_categoria.sort_values(by='Conversaciones', ascending=False)
 
@@ -354,7 +361,7 @@ categorias_disponibles = df['categoria_final'].dropna().unique()
 categoria_seleccionada = st.selectbox("Selecciona una categoría para analizar", sorted(categorias_disponibles))
 
 # Filtrar DataFrame
-df_filtrado = df[df['categoria_final'] == categoria_seleccionada]
+df_filtrado = df[(df['categoria_final'] == categoria_seleccionada) & (~df.marca.isna()) & (df.bots == 'No')]
 
 # Agrupar por intención
 intenciones_por_categoria = df_filtrado.groupby(['categoria_final', 'intencion'])['conversation_id'].nunique().reset_index()
@@ -363,6 +370,15 @@ intenciones_por_categoria.columns = ['Categoría', 'Intención', 'Conversaciones
 # Mostrar tabla
 st.dataframe(intenciones_por_categoria, use_container_width=True)
 st.dataframe(df_filtrado[df_filtrado.sender == 'USER'][['conversation_id','sender','sender_id','content']], use_container_width=True)
+
+with open("chats_no_bots.csv", "rb") as file:
+    st.download_button(
+        label="⬇️ Descargar CSV completo de conversaciones sin bots",
+        data=file,
+        file_name="chats_no_bots.csv",
+        mime="text/csv"
+    )
+
 
 # Gráfico opcional
 fig_intencion_cat = px.bar(
