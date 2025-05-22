@@ -4,8 +4,6 @@ import plotly.express as px
 import pandas as pd
 import re
 
-
-
 st.set_page_config(page_title="Dashboard General Experience", layout="wide")
 
 st.title("Análisis General Chats Experience")
@@ -348,7 +346,16 @@ st.markdown("## 🗂️ Sección 5: Análisis por Categoría Final")
 
 # Mostrar tabla resumen de cantidad de conversaciones únicas por categoría
 st.markdown("### 🔢 Conversaciones Únicas por Categoría")
-conversaciones_por_categoria = df[(~df.marca.isnull()) & (df.bots == 'No')].groupby('categoria_final')['conversation_id'].nunique().reset_index()
+df.loc[
+    (~df['marca'].isna()) &
+    (df['bots'] == 'No') &
+    (df['categoria_final'].isna()) &
+    (df['sender'] == 'USER') &
+    (df['content'] != 'Excelente') &
+    (df['content'] != 'No me fue bien'),
+    'categoria_final'
+] = 'Seguimiento y confirmación de ordenes'
+conversaciones_por_categoria = df[(~df.marca.isnull()) & (df.bots == 'No') & (df.sender == 'USER') & (~df.categoria_final.isna())].groupby('categoria_final')['conversation_id'].nunique().reset_index()
 conversaciones_por_categoria.columns = ['Categoría', 'Conversaciones']
 conversaciones_por_categoria = conversaciones_por_categoria.sort_values(by='Conversaciones', ascending=False)
 
