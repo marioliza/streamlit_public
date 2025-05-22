@@ -368,7 +368,7 @@ categorias_disponibles = df['categoria_final'].dropna().unique()
 categoria_seleccionada = st.selectbox("Selecciona una categoría para analizar", sorted(categorias_disponibles))
 
 # Filtrar DataFrame
-df_filtrado = df[(df['categoria_final'] == categoria_seleccionada) & (~df.marca.isna()) & (df.bots == 'No')]
+df_filtrado = df[(df['categoria_final'] == categoria_seleccionada) & (~df.marca.isna()) & (df.bots == 'No') & (df.sender == 'USER') ]
 
 # Agrupar por intención
 intenciones_por_categoria = df_filtrado.groupby(['categoria_final', 'intencion'])['conversation_id'].nunique().reset_index()
